@@ -1,9 +1,12 @@
 import { castArray } from '@react-pdf/fns';
-import { TextInstance } from '@react-pdf/primitives';
+import { TextInstance, Image } from '@react-pdf/primitives';
+import fetchImage from '../image/fetchImage';
 
 const isString = value => typeof value === 'string';
 
 const isNumber = value => typeof value === 'number';
+
+const isImage = value => value.type === Image;
 
 const isFragment = value =>
   value && value.type === Symbol.for('react.fragment');
@@ -16,7 +19,7 @@ const isFragment = value =>
  * @param {Object} React element
  * @returns {Array} parsed react elements
  */
-const createInstances = element => {
+const createInstances = async element => {
   if (!element) return [];
 
   if (isString(element) || isNumber(element)) {
@@ -40,10 +43,16 @@ const createInstances = element => {
     props: { style = {}, children = [], ...props },
   } = element;
 
-  const nextChildren = castArray(children).reduce(
-    (acc, child) => acc.concat(createInstances(child)),
-    [],
+  if (isImage(element)) {
+    const node = { props, type, style, box: {} };
+    await fetchImage(node);
+    return [node];
+  }
+
+  const instances = await Promise.all(
+    castArray(children).map(child => createInstances(child)),
   );
+  const nextChildren = instances.flat();
 
   return [
     {

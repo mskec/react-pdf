@@ -1,3 +1,4 @@
+import { Text } from '@react-pdf/primitives';
 import resolvePagination from '../../src/steps/resolvePagination';
 import resolveDimensions from '../../src/steps/resolveDimensions';
 
@@ -53,6 +54,70 @@ describe('pagination step', () => {
 
     expect(page.box.height).toBe(100);
     expect(view.box.height).toBe(100);
+  });
+
+  test('should keep given page size', async () => {
+    const root = {
+      type: 'DOCUMENT',
+      children: [
+        {
+          type: 'PAGE',
+          box: {},
+          style: { width: 200, height: 500 },
+          children: [
+            {
+              type: 'VIEW',
+              box: {},
+              style: {},
+              props: {
+                fixed: true,
+                render: () => <Text style={{ height: 50 }}>Header</Text>,
+              },
+              children: [],
+            },
+            {
+              type: 'VIEW',
+              box: {},
+              style: { height: 900 },
+              props: {},
+              children: [],
+            },
+            {
+              type: 'TEXT',
+              box: {},
+              style: {},
+              props: {},
+              children: [
+                {
+                  type: 'TEXT_INSTANCE',
+                  value: 'Hello World',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const layout = await calcLayout(root);
+
+    const [page1, page2, page3] = layout.children;
+    const [page1view1, page1view2] = page1.children;
+
+    expect(page1.box.height).toBe(500);
+    expect(page1view1.box.height).toBe(50); // header
+    expect(page1view2.box.height).toBeCloseTo(450, 4); // 900 height view
+
+    const [page2view1, page2view2] = page2.children;
+    expect(page2.box.height).toBe(500);
+    expect(page2view1.box.height).toBe(50); // header
+    expect(page2view2.box.height).toBeCloseTo(450, 4); // 900 height view
+
+    expect(page3).toBeDefined();
+    const [page3view1, page3view2] = page3.children;
+    expect(page3.box.height).toBe(500);
+    expect(page3view1.box.height).toBe(50); // header
+    expect(page3view2.box.height).toBeCloseTo(20, 0); // text
   });
 
   test('should force new height for split nodes', () => {
